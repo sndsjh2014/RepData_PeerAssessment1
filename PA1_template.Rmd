@@ -5,21 +5,96 @@ output:
     keep_md: true
 ---
 
+knitr::opts_chunk$set(echo=TRUE)
 
 ## Loading and preprocessing the data
 
+```{r}
+data = read.csv("activity.csv")
+str(data)
+summary(data)
+
+```
 
 
 ## What is mean total number of steps taken per day?
+```{r total steps}
+sum <- tapply(data$steps, data$date, sum, na.rm=TRUE)
+```
+Total number of steps per day by day are `r sum`
 
+```{r histogram}
+hist(sum, main = "Histogram of the total number of steps taken each day", xlab = "Total No. of Steps", ylab = "Frequency", col = "red")
+```
 
+```{r mean and median}
+steps_mean = mean(sum)
+steps_median = median(sum)
+```
+Mean number of the total number of steps taken per day is `r steps_mean`.
+Median number of the total number of steps taken per day is `r steps_median`. 
 
 ## What is the average daily activity pattern?
+```{r activity pattern}
+daily_avg = tapply(data$steps, data$interval, mean, na.rm=TRUE)
+interval_vector = as.vector(seq(1:288))
+plot(interval_vector, daily_avg, type="l", xlab="Interval", ylab="Daily Average", main="5-minute interval vs. the average number of steps taken")
+```
 
-
+```{r max steps}
+max_interval =  which.max(daily_avg)
+```
+Daily interval containing the maximum number of steps is `r max_interval`
 
 ## Imputing missing values
+```{r missing NAs}
+missing = sum(is.na(data$steps))
+```
+The total number of missing values in the data set are `r missing`
 
+```{r replace missing NAs}
+newdata = data # make a copy of the data
+newdata$steps[is.na(newdata$steps)] = mean(daily_avg)
+newdaily_avg = tapply(newdata$steps, newdata$interval, mean)
+summary(newdata)
+```
 
+```{r new total steps}
+newsum <- tapply(newdata$steps, newdata$date, sum, na.rm=TRUE)
+```
+Total number of steps per day by day are `r newsum`
+
+```{r newhistogram}
+hist(newsum, main = "Histogram of the total number of steps taken each day", xlab = "Total No. of Steps", ylab = "Frequency", col = "red")
+```
+
+```{r new mean and median}
+newsteps_mean = mean(newsum)
+newsteps_median = median(newsum)
+```
+Mean number of the total number of steps taken per day is `r newsteps_mean`.
+Median number of the total number of steps taken per day is `r newsteps_median`. 
+
+Difference between New mean and old mean is `r steps_mean - newsteps_mean`.
+Difference between New median and old median is `r steps_median - newsteps_median`.
+Yes, this is a difference, but it depends on how the NAs are imputed. Imputing with medians produced a more normal distribution.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r weekday and weekend}
+newdata1 = newdata
+newdata1$date = as.Date(newdata1$date)
+weekdays <- c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')
+newdata1$whichday = factor((weekdays(newdata1$date) %in% weekdays), level=c(FALSE, TRUE), labels=c('weekend', 'weekday'))
+str(newdata1)
+```
+
+```{r panel plot}
+weekday_data = subset(newdata1, whichday=="weekday")
+weekend_data = subset(newdata1, whichday=="weekend")
+weekday_avg = tapply(weekday_data$steps, weekday_data$interval, mean)
+weekend_avg = tapply(weekend_data$steps, weekend_data$interval, mean)
+par(mfrow=c(2,1))
+plot(interval_vector, weekday_avg, type="l", main="weekday plot", xlab = "Interval", ylab="No of Steps")
+plot(interval_vector, weekend_avg, type="l", main="weekend plot", xlab = "Interval", ylab="No of Steps")
+#plot(newdata1$steps[newdata1$whichday=="weekend"])
+```
